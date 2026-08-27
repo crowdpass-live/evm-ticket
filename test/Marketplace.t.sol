@@ -3,7 +3,7 @@ pragma solidity 0.8.30;
 
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {ERC721Holder} from "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
-import {DeployedHostItTickets} from "@ticket-test/states/DeployedHostItTickets.sol";
+import {DeployedCrowdPassTickets} from "@ticket-test/states/DeployedCrowdPassTickets.sol";
 import {ITicket} from "@ticket/interfaces/ITicket.sol";
 import {FullTicketData, TicketData} from "@ticket/libs/FactoryLib.sol";
 /// forge-lint: disable-next-line(unaliased-plain-import)
@@ -11,7 +11,7 @@ import "@ticket/libs/MarketplaceLib.sol";
 /// forge-lint: disable-next-line(unaliased-plain-import)
 import "@ticket/libs/MarketplaceLib.sol";
 
-contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
+contract MarketplaceTest is DeployedCrowdPassTickets, ERC721Holder {
     uint256 internal constant BACKEND_PK = 0xB1AC;
     uint256 internal constant ATTACKER_PK = 0xBADBAD;
     address internal backend;
@@ -40,7 +40,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         vm.prank(alice);
         (uint64 ticketId,) = _mintTicketFree();
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.NATIVE), 0);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.NATIVE), 0);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.NATIVE), 0);
     }
 
     // ======================================================================
@@ -58,9 +58,9 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         assertEq(alice.balance, 0);
     }
 
-    function test_directPayment_ETH_hostItFeeAccumulated() public {
-        (,,, uint256 hostItFee) = _mintTicketETH();
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.NATIVE), hostItFee);
+    function test_directPayment_ETH_crowdPassFeeAccumulated() public {
+        (,,, uint256 crowdPassFee) = _mintTicketETH();
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.NATIVE), crowdPassFee);
     }
 
     function test_directPayment_ETH_noTicketBalanceEscrowed() public {
@@ -76,10 +76,10 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         assertEq(fullTicketData.soldTickets, 1);
     }
 
-    function test_directPayment_ETH_contractHoldsOnlyHostItFee() public {
-        uint256 contractBalanceBefore = hostIt.balance;
-        (,,, uint256 hostItFee) = _mintTicketETH();
-        assertEq(hostIt.balance - contractBalanceBefore, hostItFee);
+    function test_directPayment_ETH_contractHoldsOnlyCrowdPassFee() public {
+        uint256 contractBalanceBefore = crowdPass.balance;
+        (,,, uint256 crowdPassFee) = _mintTicketETH();
+        assertEq(crowdPass.balance - contractBalanceBefore, crowdPassFee);
     }
 
     function test_directPayment_ETH_emitsTicketMinted() public {
@@ -87,15 +87,15 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         uint64 ticketId = factoryFacet.ticketCount();
         (,, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
         hoax(alice, totalFee);
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TicketMinted(ticketId, FeeType.NATIVE, totalFee, 1);
         marketplaceFacet.mintTicket{value: totalFee}(ticketId, FeeType.NATIVE, alice);
     }
 
-    function test_directPayment_ETH_multipleBuyersAccumulateHostItFees() public {
+    function test_directPayment_ETH_multipleBuyersAccumulateCrowdPassFees() public {
         _createPaidTicket();
         uint64 ticketId = factoryFacet.ticketCount();
-        (, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
+        (, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
 
         hoax(alice, totalFee);
         marketplaceFacet.mintTicket{value: totalFee}(ticketId, FeeType.NATIVE, alice);
@@ -103,7 +103,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         hoax(bob, totalFee);
         marketplaceFacet.mintTicket{value: totalFee}(ticketId, FeeType.NATIVE, bob);
 
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.NATIVE), hostItFee * 2);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.NATIVE), crowdPassFee * 2);
     }
 
     function test_directPayment_ETH_multipleBuyersPayOrganizer() public {
@@ -141,9 +141,9 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         assertEq(usdt.balanceOf(owner), fee);
     }
 
-    function test_directPayment_USDT_hostItFeeAccumulated() public {
-        (,,, uint256 hostItFee,) = _mintTicketUSDT();
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.USDT), hostItFee);
+    function test_directPayment_USDT_crowdPassFeeAccumulated() public {
+        (,,, uint256 crowdPassFee,) = _mintTicketUSDT();
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.USDT), crowdPassFee);
     }
 
     function test_directPayment_USDT_noTicketBalanceEscrowed() public {
@@ -151,9 +151,9 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.USDT), 0);
     }
 
-    function test_directPayment_USDT_contractHoldsHostItFee() public {
-        (,,, uint256 hostItFee, ERC20Mock usdt) = _mintTicketUSDT();
-        assertEq(usdt.balanceOf(hostIt), hostItFee);
+    function test_directPayment_USDT_contractHoldsCrowdPassFee() public {
+        (,,, uint256 crowdPassFee, ERC20Mock usdt) = _mintTicketUSDT();
+        assertEq(usdt.balanceOf(crowdPass), crowdPassFee);
     }
 
     function test_directPayment_USDT_buyerBalanceZero() public {
@@ -179,9 +179,9 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         assertEq(usdc.balanceOf(owner), fee);
     }
 
-    function test_directPayment_USDC_hostItFeeAccumulated() public {
-        (,,, uint256 hostItFee,) = _mintTicketUSDC();
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.USDC), hostItFee);
+    function test_directPayment_USDC_crowdPassFeeAccumulated() public {
+        (,,, uint256 crowdPassFee,) = _mintTicketUSDC();
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.USDC), crowdPassFee);
     }
 
     function test_directPayment_USDC_noTicketBalanceEscrowed() public {
@@ -189,9 +189,9 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.USDC), 0);
     }
 
-    function test_directPayment_USDC_contractHoldsHostItFee() public {
-        (,,, uint256 hostItFee, ERC20Mock usdc) = _mintTicketUSDC();
-        assertEq(usdc.balanceOf(hostIt), hostItFee);
+    function test_directPayment_USDC_contractHoldsCrowdPassFee() public {
+        (,,, uint256 crowdPassFee, ERC20Mock usdc) = _mintTicketUSDC();
+        assertEq(usdc.balanceOf(crowdPass), crowdPassFee);
     }
 
     function test_directPayment_USDC_ticketMintedToBuyer() public {
@@ -209,28 +209,28 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
     function test_directPayment_USDT_revertsInsufficientBalance() public {
         _createPaidTicket();
         uint64 ticketId = factoryFacet.ticketCount();
-        (, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.USDT);
+        (, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.USDT);
         ERC20Mock usdt = ERC20Mock(marketplaceFacet.getFeeTokenAddress(FeeType.USDT));
-        // Mint just under totalFee so balance check fails on the second _payWithToken call (hostItFee)
+        // Mint just under totalFee so balance check fails on the second _payWithToken call (crowdPassFee)
         usdt.mint(alice, totalFee - 1);
         vm.prank(alice);
         usdt.approve(address(marketplaceFacet), totalFee);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(InsufficientBalance.selector, address(usdt), FeeType.USDT, hostItFee));
+        vm.expectRevert(abi.encodeWithSelector(InsufficientBalance.selector, address(usdt), FeeType.USDT, crowdPassFee));
         marketplaceFacet.mintTicket(ticketId, FeeType.USDT, alice);
     }
 
     function test_directPayment_USDT_revertsInsufficientAllowance() public {
         _createPaidTicket();
         uint64 ticketId = factoryFacet.ticketCount();
-        (, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.USDT);
+        (, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.USDT);
         ERC20Mock usdt = ERC20Mock(marketplaceFacet.getFeeTokenAddress(FeeType.USDT));
         usdt.mint(alice, totalFee);
         vm.prank(alice);
-        // Approve just under totalFee so allowance check fails on the second _payWithToken call (hostItFee)
+        // Approve just under totalFee so allowance check fails on the second _payWithToken call (crowdPassFee)
         usdt.approve(address(marketplaceFacet), totalFee - 1);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(InsufficientAllowance.selector, address(usdt), FeeType.USDT, hostItFee));
+        vm.expectRevert(abi.encodeWithSelector(InsufficientAllowance.selector, address(usdt), FeeType.USDT, crowdPassFee));
         marketplaceFacet.mintTicket(ticketId, FeeType.USDT, alice);
     }
 
@@ -260,39 +260,39 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
     }
 
     // ======================================================================
-    //            NON-REFUNDABLE: WITHDRAW HOSTIT BALANCE
+    //            NON-REFUNDABLE: WITHDRAW CROWDPASS BALANCE
     // ======================================================================
 
-    function test_directPayment_withdrawHostItBalanceETH() public {
-        (,,, uint256 hostItFee) = _mintTicketETH();
-        vm.expectEmit(true, true, true, true, hostIt);
-        emit HostItBalanceWithdrawn(FeeType.NATIVE, hostItFee, withdrawer);
-        marketplaceFacet.withdrawHostItBalance(FeeType.NATIVE, withdrawer);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.NATIVE), 0);
-        assertEq(withdrawer.balance, hostItFee);
+    function test_directPayment_withdrawCrowdPassBalanceETH() public {
+        (,,, uint256 crowdPassFee) = _mintTicketETH();
+        vm.expectEmit(true, true, true, true, crowdPass);
+        emit CrowdPassBalanceWithdrawn(FeeType.NATIVE, crowdPassFee, withdrawer);
+        marketplaceFacet.withdrawCrowdPassBalance(FeeType.NATIVE, withdrawer);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.NATIVE), 0);
+        assertEq(withdrawer.balance, crowdPassFee);
     }
 
-    function test_directPayment_withdrawHostItBalanceUSDT() public {
-        (,,, uint256 hostItFee, ERC20Mock usdt) = _mintTicketUSDT();
-        vm.expectEmit(true, true, true, true, hostIt);
-        emit HostItBalanceWithdrawn(FeeType.USDT, hostItFee, withdrawer);
-        marketplaceFacet.withdrawHostItBalance(FeeType.USDT, withdrawer);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.USDT), 0);
-        assertEq(usdt.balanceOf(withdrawer), hostItFee);
+    function test_directPayment_withdrawCrowdPassBalanceUSDT() public {
+        (,,, uint256 crowdPassFee, ERC20Mock usdt) = _mintTicketUSDT();
+        vm.expectEmit(true, true, true, true, crowdPass);
+        emit CrowdPassBalanceWithdrawn(FeeType.USDT, crowdPassFee, withdrawer);
+        marketplaceFacet.withdrawCrowdPassBalance(FeeType.USDT, withdrawer);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.USDT), 0);
+        assertEq(usdt.balanceOf(withdrawer), crowdPassFee);
     }
 
-    function test_directPayment_withdrawHostItBalanceUSDC() public {
-        (,,, uint256 hostItFee, ERC20Mock usdc) = _mintTicketUSDC();
-        vm.expectEmit(true, true, true, true, hostIt);
-        emit HostItBalanceWithdrawn(FeeType.USDC, hostItFee, withdrawer);
-        marketplaceFacet.withdrawHostItBalance(FeeType.USDC, withdrawer);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.USDC), 0);
-        assertEq(usdc.balanceOf(withdrawer), hostItFee);
+    function test_directPayment_withdrawCrowdPassBalanceUSDC() public {
+        (,,, uint256 crowdPassFee, ERC20Mock usdc) = _mintTicketUSDC();
+        vm.expectEmit(true, true, true, true, crowdPass);
+        emit CrowdPassBalanceWithdrawn(FeeType.USDC, crowdPassFee, withdrawer);
+        marketplaceFacet.withdrawCrowdPassBalance(FeeType.USDC, withdrawer);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.USDC), 0);
+        assertEq(usdc.balanceOf(withdrawer), crowdPassFee);
     }
 
-    function test_directPayment_withdrawHostItBalanceRevertsIfZero() public {
+    function test_directPayment_withdrawCrowdPassBalanceRevertsIfZero() public {
         vm.expectRevert(InsufficientWithdrawBalance.selector);
-        marketplaceFacet.withdrawHostItBalance(FeeType.NATIVE, withdrawer);
+        marketplaceFacet.withdrawCrowdPassBalance(FeeType.NATIVE, withdrawer);
     }
 
     // ======================================================================
@@ -300,9 +300,9 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
     // ======================================================================
 
     function test_refundable_ETH_fundsEscrowed() public {
-        (uint64 ticketId,, uint256 fee, uint256 hostItFee) = _mintTicketETHRefundable();
+        (uint64 ticketId,, uint256 fee, uint256 crowdPassFee) = _mintTicketETHRefundable();
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.NATIVE), fee);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.NATIVE), hostItFee);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.NATIVE), crowdPassFee);
     }
 
     function test_refundable_ETH_organizerDoesNotReceiveFee() public {
@@ -312,9 +312,9 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
     }
 
     function test_refundable_ETH_contractHoldsTotalFee() public {
-        uint256 contractBalanceBefore = hostIt.balance;
-        (,, uint256 fee, uint256 hostItFee) = _mintTicketETHRefundable();
-        assertEq(hostIt.balance - contractBalanceBefore, fee + hostItFee);
+        uint256 contractBalanceBefore = crowdPass.balance;
+        (,, uint256 fee, uint256 crowdPassFee) = _mintTicketETHRefundable();
+        assertEq(crowdPass.balance - contractBalanceBefore, fee + crowdPassFee);
     }
 
     function test_refundable_ETH_ticketMintedToBuyer() public {
@@ -326,23 +326,23 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
     }
 
     function test_refundable_ETH_claimRefund() public {
-        (uint64 ticketId, uint40 tokenId, uint256 fee, uint256 hostItFee) = _mintTicketETHRefundable();
+        (uint64 ticketId, uint40 tokenId, uint256 fee, uint256 crowdPassFee) = _mintTicketETHRefundable();
         FullTicketData memory fullTicketData = factoryFacet.ticketData(ticketId);
         ITicket ticket = ITicket(fullTicketData.ticketAddress);
 
         vm.prank(alice);
-        ticket.approve(hostIt, tokenId);
+        ticket.approve(crowdPass, tokenId);
 
         vm.warp(fullTicketData.endTime);
         vm.prank(alice);
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TicketRefunded(ticketId, FeeType.NATIVE, fee, bob);
         marketplaceFacet.claimRefund(ticketId, FeeType.NATIVE, tokenId, bob);
 
         assertEq(ticket.ownerOf(tokenId), owner);
         assertEq(bob.balance, fee);
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.NATIVE), 0);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.NATIVE), hostItFee);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.NATIVE), crowdPassFee);
     }
 
     function test_refundable_ETH_claimRefundRevertsBeforeEndTime() public {
@@ -351,7 +351,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         ITicket ticket = ITicket(fullTicketData.ticketAddress);
 
         vm.prank(alice);
-        ticket.approve(hostIt, tokenId);
+        ticket.approve(crowdPass, tokenId);
 
         vm.warp(fullTicketData.endTime - 1);
         vm.prank(alice);
@@ -365,7 +365,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         ITicket ticket = ITicket(fullTicketData.ticketAddress);
 
         vm.prank(alice);
-        ticket.approve(hostIt, tokenId);
+        ticket.approve(crowdPass, tokenId);
 
         vm.warp(fullTicketData.endTime + marketplaceFacet.getRefundPeriod() + 1);
         vm.prank(alice);
@@ -388,7 +388,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         FullTicketData memory fullTicketData = factoryFacet.ticketData(ticketId);
 
         vm.warp(fullTicketData.endTime + marketplaceFacet.getRefundPeriod());
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TicketBalanceWithdrawn(ticketId, FeeType.NATIVE, fee, withdrawer);
         marketplaceFacet.withdrawTicketBalance(ticketId, FeeType.NATIVE, withdrawer);
 
@@ -410,9 +410,9 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
     // ======================================================================
 
     function test_refundable_USDT_fundsEscrowed() public {
-        (uint64 ticketId,, uint256 fee, uint256 hostItFee,) = _mintTicketUSDTRefundable();
+        (uint64 ticketId,, uint256 fee, uint256 crowdPassFee,) = _mintTicketUSDTRefundable();
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.USDT), fee);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.USDT), hostItFee);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.USDT), crowdPassFee);
     }
 
     function test_refundable_USDT_organizerDoesNotReceiveFee() public {
@@ -421,28 +421,28 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
     }
 
     function test_refundable_USDT_contractHoldsTotalFee() public {
-        (,, uint256 fee, uint256 hostItFee, ERC20Mock usdt) = _mintTicketUSDTRefundable();
-        assertEq(usdt.balanceOf(hostIt), fee + hostItFee);
+        (,, uint256 fee, uint256 crowdPassFee, ERC20Mock usdt) = _mintTicketUSDTRefundable();
+        assertEq(usdt.balanceOf(crowdPass), fee + crowdPassFee);
     }
 
     function test_refundable_USDT_claimRefund() public {
-        (uint64 ticketId, uint40 tokenId, uint256 fee, uint256 hostItFee, ERC20Mock usdt) = _mintTicketUSDTRefundable();
+        (uint64 ticketId, uint40 tokenId, uint256 fee, uint256 crowdPassFee, ERC20Mock usdt) = _mintTicketUSDTRefundable();
         FullTicketData memory fullTicketData = factoryFacet.ticketData(ticketId);
         ITicket ticket = ITicket(fullTicketData.ticketAddress);
 
         vm.prank(alice);
-        ticket.approve(hostIt, tokenId);
+        ticket.approve(crowdPass, tokenId);
 
         vm.warp(fullTicketData.endTime);
         vm.prank(alice);
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TicketRefunded(ticketId, FeeType.USDT, fee, bob);
         marketplaceFacet.claimRefund(ticketId, FeeType.USDT, tokenId, bob);
 
         assertEq(ticket.ownerOf(tokenId), owner);
         assertEq(usdt.balanceOf(bob), fee);
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.USDT), 0);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.USDT), hostItFee);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.USDT), crowdPassFee);
     }
 
     function test_refundable_USDT_withdrawTicketBalanceAfterRefundPeriod() public {
@@ -450,7 +450,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         FullTicketData memory fullTicketData = factoryFacet.ticketData(ticketId);
 
         vm.warp(fullTicketData.endTime + marketplaceFacet.getRefundPeriod());
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TicketBalanceWithdrawn(ticketId, FeeType.USDT, fee, withdrawer);
         marketplaceFacet.withdrawTicketBalance(ticketId, FeeType.USDT, withdrawer);
 
@@ -463,9 +463,9 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
     // ======================================================================
 
     function test_refundable_USDC_fundsEscrowed() public {
-        (uint64 ticketId,, uint256 fee, uint256 hostItFee,) = _mintTicketUSDCRefundable();
+        (uint64 ticketId,, uint256 fee, uint256 crowdPassFee,) = _mintTicketUSDCRefundable();
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.USDC), fee);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.USDC), hostItFee);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.USDC), crowdPassFee);
     }
 
     function test_refundable_USDC_organizerDoesNotReceiveFee() public {
@@ -474,28 +474,28 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
     }
 
     function test_refundable_USDC_contractHoldsTotalFee() public {
-        (,, uint256 fee, uint256 hostItFee, ERC20Mock usdc) = _mintTicketUSDCRefundable();
-        assertEq(usdc.balanceOf(hostIt), fee + hostItFee);
+        (,, uint256 fee, uint256 crowdPassFee, ERC20Mock usdc) = _mintTicketUSDCRefundable();
+        assertEq(usdc.balanceOf(crowdPass), fee + crowdPassFee);
     }
 
     function test_refundable_USDC_claimRefund() public {
-        (uint64 ticketId, uint40 tokenId, uint256 fee, uint256 hostItFee, ERC20Mock usdc) = _mintTicketUSDCRefundable();
+        (uint64 ticketId, uint40 tokenId, uint256 fee, uint256 crowdPassFee, ERC20Mock usdc) = _mintTicketUSDCRefundable();
         FullTicketData memory fullTicketData = factoryFacet.ticketData(ticketId);
         ITicket ticket = ITicket(fullTicketData.ticketAddress);
 
         vm.prank(alice);
-        ticket.approve(hostIt, tokenId);
+        ticket.approve(crowdPass, tokenId);
 
         vm.warp(fullTicketData.endTime);
         vm.prank(alice);
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TicketRefunded(ticketId, FeeType.USDC, fee, bob);
         marketplaceFacet.claimRefund(ticketId, FeeType.USDC, tokenId, bob);
 
         assertEq(ticket.ownerOf(tokenId), owner);
         assertEq(usdc.balanceOf(bob), fee);
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.USDC), 0);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.USDC), hostItFee);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.USDC), crowdPassFee);
     }
 
     function test_refundable_USDC_withdrawTicketBalanceAfterRefundPeriod() public {
@@ -503,7 +503,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         FullTicketData memory fullTicketData = factoryFacet.ticketData(ticketId);
 
         vm.warp(fullTicketData.endTime + marketplaceFacet.getRefundPeriod());
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TicketBalanceWithdrawn(ticketId, FeeType.USDC, fee, withdrawer);
         marketplaceFacet.withdrawTicketBalance(ticketId, FeeType.USDC, withdrawer);
 
@@ -512,34 +512,34 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
     }
 
     // ======================================================================
-    //            REFUNDABLE: HOSTIT BALANCE WITHDRAW AFTER ESCROW
+    //            REFUNDABLE: CROWDPASS BALANCE WITHDRAW AFTER ESCROW
     // ======================================================================
 
-    function test_refundable_withdrawHostItBalanceETH() public {
-        (,,, uint256 hostItFee) = _mintTicketETHRefundable();
-        vm.expectEmit(true, true, true, true, hostIt);
-        emit HostItBalanceWithdrawn(FeeType.NATIVE, hostItFee, withdrawer);
-        marketplaceFacet.withdrawHostItBalance(FeeType.NATIVE, withdrawer);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.NATIVE), 0);
-        assertEq(withdrawer.balance, hostItFee);
+    function test_refundable_withdrawCrowdPassBalanceETH() public {
+        (,,, uint256 crowdPassFee) = _mintTicketETHRefundable();
+        vm.expectEmit(true, true, true, true, crowdPass);
+        emit CrowdPassBalanceWithdrawn(FeeType.NATIVE, crowdPassFee, withdrawer);
+        marketplaceFacet.withdrawCrowdPassBalance(FeeType.NATIVE, withdrawer);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.NATIVE), 0);
+        assertEq(withdrawer.balance, crowdPassFee);
     }
 
-    function test_refundable_withdrawHostItBalanceUSDT() public {
-        (,,, uint256 hostItFee, ERC20Mock usdt) = _mintTicketUSDTRefundable();
-        vm.expectEmit(true, true, true, true, hostIt);
-        emit HostItBalanceWithdrawn(FeeType.USDT, hostItFee, withdrawer);
-        marketplaceFacet.withdrawHostItBalance(FeeType.USDT, withdrawer);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.USDT), 0);
-        assertEq(usdt.balanceOf(withdrawer), hostItFee);
+    function test_refundable_withdrawCrowdPassBalanceUSDT() public {
+        (,,, uint256 crowdPassFee, ERC20Mock usdt) = _mintTicketUSDTRefundable();
+        vm.expectEmit(true, true, true, true, crowdPass);
+        emit CrowdPassBalanceWithdrawn(FeeType.USDT, crowdPassFee, withdrawer);
+        marketplaceFacet.withdrawCrowdPassBalance(FeeType.USDT, withdrawer);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.USDT), 0);
+        assertEq(usdt.balanceOf(withdrawer), crowdPassFee);
     }
 
-    function test_refundable_withdrawHostItBalanceUSDC() public {
-        (,,, uint256 hostItFee, ERC20Mock usdc) = _mintTicketUSDCRefundable();
-        vm.expectEmit(true, true, true, true, hostIt);
-        emit HostItBalanceWithdrawn(FeeType.USDC, hostItFee, withdrawer);
-        marketplaceFacet.withdrawHostItBalance(FeeType.USDC, withdrawer);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.USDC), 0);
-        assertEq(usdc.balanceOf(withdrawer), hostItFee);
+    function test_refundable_withdrawCrowdPassBalanceUSDC() public {
+        (,,, uint256 crowdPassFee, ERC20Mock usdc) = _mintTicketUSDCRefundable();
+        vm.expectEmit(true, true, true, true, crowdPass);
+        emit CrowdPassBalanceWithdrawn(FeeType.USDC, crowdPassFee, withdrawer);
+        marketplaceFacet.withdrawCrowdPassBalance(FeeType.USDC, withdrawer);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.USDC), 0);
+        assertEq(usdc.balanceOf(withdrawer), crowdPassFee);
     }
 
     // ======================================================================
@@ -563,10 +563,10 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
     function test_feeCalculation() public {
         _createPaidTicket();
         uint64 ticketId = factoryFacet.ticketCount();
-        (uint256 fee, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
+        (uint256 fee, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
         assertEq(fee, ETH_FEE);
-        assertEq(hostItFee, (ETH_FEE * 300) / 10_000);
-        assertEq(totalFee, fee + hostItFee);
+        assertEq(crowdPassFee, (ETH_FEE * 300) / 10_000);
+        assertEq(totalFee, fee + crowdPassFee);
     }
 
     function test_feeNotEnabled_reverts() public {
@@ -688,11 +688,11 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
     //            WITHDRAW TO CONTRACT REVERTS
     // ======================================================================
 
-    function test_withdrawHostItBalance_revertsNonOwner() public {
+    function test_withdrawCrowdPassBalance_revertsNonOwner() public {
         _mintTicketETH();
         vm.prank(alice);
         vm.expectRevert();
-        marketplaceFacet.withdrawHostItBalance(FeeType.NATIVE, withdrawer);
+        marketplaceFacet.withdrawCrowdPassBalance(FeeType.NATIVE, withdrawer);
     }
 
     // ======================================================================
@@ -705,26 +705,26 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
     }
 
     // ======================================================================
-    //            MIXED: REFUNDABLE + NON-REFUNDABLE HOSTIT ACCUMULATION
+    //            MIXED: REFUNDABLE + NON-REFUNDABLE CROWDPASS ACCUMULATION
     // ======================================================================
 
-    function test_hostItBalanceAccumulatesAcrossTickets() public {
+    function test_crowdPassBalanceAccumulatesAcrossTickets() public {
         // Non-refundable ticket
-        (,,, uint256 hostItFee1) = _mintTicketETH();
+        (,,, uint256 crowdPassFee1) = _mintTicketETH();
         // Refundable ticket
-        (,,, uint256 hostItFee2) = _mintTicketETHRefundable();
+        (,,, uint256 crowdPassFee2) = _mintTicketETHRefundable();
 
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.NATIVE), hostItFee1 + hostItFee2);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.NATIVE), crowdPassFee1 + crowdPassFee2);
     }
 
     // ======================================================================
     //                           FUZZ TESTS
     // ======================================================================
 
-    function testFuzz_hostItFeeCalculation(uint256 fee) public view {
+    function testFuzz_crowdPassFeeCalculation(uint256 fee) public view {
         fee = bound(fee, 0, type(uint256).max / 300);
-        uint256 hostItFee = marketplaceFacet.getHostItFee(fee);
-        assertEq(hostItFee, (fee * 300) / 10_000);
+        uint256 crowdPassFee = marketplaceFacet.getCrowdPassFee(fee);
+        assertEq(crowdPassFee, (fee * 300) / 10_000);
     }
 
     function testFuzz_totalFeeIsSumOfParts(uint256 fee) public {
@@ -739,10 +739,10 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         fees[0] = fee;
         marketplaceFacet.updateTicketFees(ticketId, feeTypes, fees);
 
-        (uint256 ticketFee, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
+        (uint256 ticketFee, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
         assertEq(ticketFee, fee);
-        assertEq(hostItFee, (fee * 300) / 10_000);
-        assertEq(totalFee, ticketFee + hostItFee);
+        assertEq(crowdPassFee, (fee * 300) / 10_000);
+        assertEq(totalFee, ticketFee + crowdPassFee);
     }
 
     function testFuzz_directPayment_ETH_accounting(uint256 fee) public {
@@ -756,17 +756,17 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         factoryFacet.createTicket(td, feeTypes, fees);
         uint64 ticketId = factoryFacet.ticketCount();
 
-        (uint256 ticketFee, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
+        (uint256 ticketFee, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
 
         uint256 ownerBalBefore = owner.balance;
-        uint256 contractBalBefore = hostIt.balance;
+        uint256 contractBalBefore = crowdPass.balance;
 
         hoax(alice, totalFee);
         marketplaceFacet.mintTicket{value: totalFee}(ticketId, FeeType.NATIVE, alice);
 
         assertEq(owner.balance - ownerBalBefore, ticketFee);
-        assertEq(hostIt.balance - contractBalBefore, hostItFee);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.NATIVE), hostItFee);
+        assertEq(crowdPass.balance - contractBalBefore, crowdPassFee);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.NATIVE), crowdPassFee);
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.NATIVE), 0);
         assertEq(alice.balance, 0);
     }
@@ -782,7 +782,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         factoryFacet.createTicket(td, feeTypes, fees);
         uint64 ticketId = factoryFacet.ticketCount();
 
-        (uint256 ticketFee, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.USDT);
+        (uint256 ticketFee, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.USDT);
         ERC20Mock usdt = ERC20Mock(marketplaceFacet.getFeeTokenAddress(FeeType.USDT));
         usdt.mint(alice, totalFee);
 
@@ -792,8 +792,8 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         marketplaceFacet.mintTicket(ticketId, FeeType.USDT, alice);
 
         assertEq(usdt.balanceOf(owner), ticketFee);
-        assertEq(usdt.balanceOf(hostIt), hostItFee);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.USDT), hostItFee);
+        assertEq(usdt.balanceOf(crowdPass), crowdPassFee);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.USDT), crowdPassFee);
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.USDT), 0);
         assertEq(usdt.balanceOf(alice), 0);
     }
@@ -809,27 +809,27 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         factoryFacet.createTicket(td, feeTypes, fees);
         uint64 ticketId = factoryFacet.ticketCount();
 
-        (uint256 ticketFee, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
+        (uint256 ticketFee, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
 
         uint256 ownerBalBefore = owner.balance;
-        uint256 contractBalBefore = hostIt.balance;
+        uint256 contractBalBefore = crowdPass.balance;
 
         hoax(alice, totalFee);
         marketplaceFacet.mintTicket{value: totalFee}(ticketId, FeeType.NATIVE, alice);
 
         assertEq(owner.balance, ownerBalBefore);
-        assertEq(hostIt.balance - contractBalBefore, ticketFee + hostItFee);
+        assertEq(crowdPass.balance - contractBalBefore, ticketFee + crowdPassFee);
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.NATIVE), ticketFee);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.NATIVE), hostItFee);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.NATIVE), crowdPassFee);
     }
 
     function testFuzz_refundable_ETH_claimWithinWindow(uint256 warpOffset) public {
-        (uint64 ticketId, uint40 tokenId, uint256 fee, uint256 hostItFee) = _mintTicketETHRefundable();
+        (uint64 ticketId, uint40 tokenId, uint256 fee, uint256 crowdPassFee) = _mintTicketETHRefundable();
         FullTicketData memory ftd = factoryFacet.ticketData(ticketId);
         ITicket ticket = ITicket(ftd.ticketAddress);
 
         vm.prank(alice);
-        ticket.approve(hostIt, tokenId);
+        ticket.approve(crowdPass, tokenId);
 
         uint256 refundPeriod = marketplaceFacet.getRefundPeriod();
         warpOffset = bound(warpOffset, 0, refundPeriod);
@@ -840,7 +840,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
 
         assertEq(bob.balance, fee);
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.NATIVE), 0);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.NATIVE), hostItFee);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.NATIVE), crowdPassFee);
     }
 
     function testFuzz_refundable_ETH_claimRevertsBeforeEndTime(uint256 warpTo) public {
@@ -849,7 +849,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         ITicket ticket = ITicket(ftd.ticketAddress);
 
         vm.prank(alice);
-        ticket.approve(hostIt, tokenId);
+        ticket.approve(crowdPass, tokenId);
 
         warpTo = bound(warpTo, block.timestamp, ftd.endTime - 1);
         vm.warp(warpTo);
@@ -865,7 +865,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         ITicket ticket = ITicket(ftd.ticketAddress);
 
         vm.prank(alice);
-        ticket.approve(hostIt, tokenId);
+        ticket.approve(crowdPass, tokenId);
 
         uint256 refundPeriod = marketplaceFacet.getRefundPeriod();
         extraTime = bound(extraTime, 1, 365 days);
@@ -906,7 +906,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
 
         _createPaidTicket();
         uint64 ticketId = factoryFacet.ticketCount();
-        (uint256 ticketFee, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
+        (uint256 ticketFee, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
 
         uint256 ownerBalBefore = owner.balance;
 
@@ -916,7 +916,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
             marketplaceFacet.mintTicket{value: totalFee}(ticketId, FeeType.NATIVE, buyer);
         }
 
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.NATIVE), hostItFee * buyerCount);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.NATIVE), crowdPassFee * buyerCount);
         assertEq(owner.balance - ownerBalBefore, ticketFee * buyerCount);
 
         FullTicketData memory ftd = factoryFacet.ticketData(ticketId);
@@ -936,8 +936,8 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         marketplaceFacet.mintTicket{value: sent}(ticketId, FeeType.NATIVE, alice);
     }
 
-    function testFuzz_withdrawHostItBalance_ETH(uint256 fee) public {
-        // fee must be >= 34 so hostItFee = fee * 300 / 10_000 > 0
+    function testFuzz_withdrawCrowdPassBalance_ETH(uint256 fee) public {
+        // fee must be >= 34 so crowdPassFee = fee * 300 / 10_000 > 0
         fee = bound(fee, 34, 1e24);
 
         TicketData memory td = _getPaidTicketData();
@@ -948,14 +948,14 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         factoryFacet.createTicket(td, feeTypes, fees);
         uint64 ticketId = factoryFacet.ticketCount();
 
-        (, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
+        (, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
 
         hoax(alice, totalFee);
         marketplaceFacet.mintTicket{value: totalFee}(ticketId, FeeType.NATIVE, alice);
 
-        marketplaceFacet.withdrawHostItBalance(FeeType.NATIVE, withdrawer);
-        assertEq(withdrawer.balance, hostItFee);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.NATIVE), 0);
+        marketplaceFacet.withdrawCrowdPassBalance(FeeType.NATIVE, withdrawer);
+        assertEq(withdrawer.balance, crowdPassFee);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.NATIVE), 0);
     }
 
     function testFuzz_refundable_ETH_fullLifecycle(uint256 fee, uint256 refundOffset) public {
@@ -971,7 +971,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         factoryFacet.createTicket(td, feeTypes, fees);
         uint64 ticketId = factoryFacet.ticketCount();
 
-        (uint256 ticketFee, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
+        (uint256 ticketFee, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
         FullTicketData memory ftd = factoryFacet.ticketData(ticketId);
         ITicket ticket = ITicket(ftd.ticketAddress);
 
@@ -980,7 +980,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.NATIVE), ticketFee);
 
         vm.prank(alice);
-        ticket.approve(hostIt, tokenId);
+        ticket.approve(crowdPass, tokenId);
         vm.warp(ftd.endTime + refundOffset);
 
         vm.prank(alice);
@@ -988,7 +988,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
 
         assertEq(bob.balance, ticketFee);
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.NATIVE), 0);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.NATIVE), hostItFee);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.NATIVE), crowdPassFee);
         assertEq(ticket.ownerOf(tokenId), owner);
     }
 
@@ -1004,7 +1004,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         factoryFacet.createTicket(td, feeTypes, fees);
         uint64 ticketId = factoryFacet.ticketCount();
 
-        (uint256 ticketFee, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
+        (uint256 ticketFee, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId, FeeType.NATIVE);
         FullTicketData memory ftd = factoryFacet.ticketData(ticketId);
         ITicket ticket = ITicket(ftd.ticketAddress);
 
@@ -1022,14 +1022,14 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
 
         for (uint8 i; i < refundCount; ++i) {
             vm.prank(buyers[i]);
-            ticket.approve(hostIt, tokenIds[i]);
+            ticket.approve(crowdPass, tokenIds[i]);
             vm.prank(buyers[i]);
             marketplaceFacet.claimRefund(ticketId, FeeType.NATIVE, tokenIds[i], buyers[i]);
         }
 
         uint256 remaining = uint256(buyerCount - refundCount) * ticketFee;
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.NATIVE), remaining);
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.NATIVE), hostItFee * buyerCount);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.NATIVE), crowdPassFee * buyerCount);
     }
 
     receive() external payable {}
@@ -1081,9 +1081,9 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         uint256 amount = 1500;
 
         vm.prank(backend);
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TicketMinted(ticketId, FeeType.FIAT, amount, 1);
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit FiatTicketMinted(ticketId, alice, 1, amount, pid);
         uint40 tokenId = marketplaceFacet.mintFiatTicket(ticketId, alice, amount, pid);
 
@@ -1188,9 +1188,9 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         bytes memory sig = _sign(v);
 
         vm.prank(charlie); // anyone can submit
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TicketMinted(ticketId, FeeType.FIAT, 250, 1);
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit FiatTicketMinted(ticketId, alice, 1, 250, v.paymentId);
         uint40 tokenId = marketplaceFacet.redeemFiatVoucher(v, sig);
 
@@ -1424,18 +1424,18 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
     }
 
     // ======================================================================
-    //                    FIAT: LEDGER — NO HOSTIT FEE
+    //                    FIAT: LEDGER — NO CROWDPASS FEE
     // ======================================================================
 
-    function test_fiat_noHostItFeeAccumulated() public {
+    function test_fiat_noCrowdPassFeeAccumulated() public {
         uint64 ticketId = _createFiatTicket();
         vm.prank(backend);
         marketplaceFacet.mintFiatTicket(ticketId, alice, 10_000, keccak256("p"));
 
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.FIAT), 0);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.FIAT), 0);
         assertEq(marketplaceFacet.getTicketBalance(ticketId, FeeType.FIAT), 0);
         // Crypto ledger untouched
-        assertEq(marketplaceFacet.getHostItBalance(FeeType.NATIVE), 0);
+        assertEq(marketplaceFacet.getCrowdPassBalance(FeeType.NATIVE), 0);
     }
 
     // ======================================================================
@@ -1512,9 +1512,9 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         marketplaceFacet.withdrawTicketBalance(ticketId, FeeType.FIAT, withdrawer);
     }
 
-    function test_guards_withdrawHostItBalance_revertsForFIAT() public {
+    function test_guards_withdrawCrowdPassBalance_revertsForFIAT() public {
         vm.expectRevert(FiatBalanceNotWithdrawable.selector);
-        marketplaceFacet.withdrawHostItBalance(FeeType.FIAT, withdrawer);
+        marketplaceFacet.withdrawCrowdPassBalance(FeeType.FIAT, withdrawer);
     }
 
     // ======================================================================
@@ -1529,7 +1529,7 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
 
     function test_setTrustedBackend_rotates() public {
         address newBackend = makeAddr("newBackend");
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TrustedBackendUpdated(backend, newBackend);
         marketplaceFacet.setTrustedBackend(newBackend);
         assertEq(marketplaceFacet.getTrustedBackend(), newBackend);
@@ -1553,10 +1553,10 @@ contract MarketplaceTest is DeployedHostItTickets, ERC721Holder {
         bytes32 expected = keccak256(
             abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes("HostItTickets")),
+                keccak256(bytes("CrowdPassTickets")),
                 keccak256(bytes("1")),
                 block.chainid,
-                hostIt
+                crowdPass
             )
         );
         assertEq(marketplaceFacet.getFiatDomainSeparator(), expected);

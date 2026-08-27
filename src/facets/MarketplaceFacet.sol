@@ -28,8 +28,8 @@ contract MarketplaceFacet is IMarketplace, IFacet {
         MarketplaceLib.withdrawTicketBalance(_ticketId, _feeType, _to);
     }
 
-    function withdrawHostItBalance(FeeType _feeType, address _to) external {
-        MarketplaceLib.withdrawHostItBalance(_feeType, _to);
+    function withdrawCrowdPassBalance(FeeType _feeType, address _to) external {
+        MarketplaceLib.withdrawCrowdPassBalance(_feeType, _to);
     }
 
     //*//////////////////////////////////////////////////////////////////////////
@@ -91,11 +91,11 @@ contract MarketplaceFacet is IMarketplace, IFacet {
         return MarketplaceLib.getTicketFee(_ticketId, _feeType);
     }
 
-    // @return ticketFee_ {tok}, hostItFee_ {tok}, totalFee_ {tok}
+    // @return ticketFee_ {tok}, crowdPassFee_ {tok}, totalFee_ {tok}
     function getAllFees(uint64 _ticketId, FeeType _feeType)
         external
         view
-        returns (uint256 ticketFee_, uint256 hostItFee_, uint256 totalFee_)
+        returns (uint256 ticketFee_, uint256 crowdPassFee_, uint256 totalFee_)
     {
         return MarketplaceLib.getFees(_ticketId, _feeType);
     }
@@ -106,8 +106,8 @@ contract MarketplaceFacet is IMarketplace, IFacet {
     }
 
     // @return {tok}
-    function getHostItBalance(FeeType _feeType) external view returns (uint256) {
-        return MarketplaceLib.getHostItBalance(_feeType);
+    function getCrowdPassBalance(FeeType _feeType) external view returns (uint256) {
+        return MarketplaceLib.getCrowdPassBalance(_feeType);
     }
 
     //*//////////////////////////////////////////////////////////////////////////
@@ -149,8 +149,8 @@ contract MarketplaceFacet is IMarketplace, IFacet {
     //////////////////////////////////////////////////////////////////////////*//
 
     // @param _fee {tok} @return {tok}
-    function getHostItFee(uint256 _fee) external pure returns (uint256) {
-        return MarketplaceLib.getHostItFee(_fee);
+    function getCrowdPassFee(uint256 _fee) external pure returns (uint256) {
+        return MarketplaceLib.getCrowdPassFee(_fee);
     }
 
     // @return {s}
@@ -174,10 +174,10 @@ contract MarketplaceFacet is IMarketplace, IFacet {
                 this.getFeeTokenAddress.selector,
                 this.getFiatDomainSeparator.selector,
                 this.getFiatVoucherTypehash.selector,
-                this.getHostItBalance.selector
+                this.getCrowdPassBalance.selector
             ),
             abi.encodePacked(
-                this.getHostItFee.selector,
+                this.getCrowdPassFee.selector,
                 this.getRefundPeriod.selector,
                 this.getTicketBalance.selector,
                 this.getTicketFee.selector,
@@ -193,7 +193,7 @@ contract MarketplaceFacet is IMarketplace, IFacet {
                 this.redeemFiatVoucher.selector,
                 this.setTrustedBackend.selector,
                 this.updateTicketFees.selector,
-                this.withdrawHostItBalance.selector,
+                this.withdrawCrowdPassBalance.selector,
                 this.withdrawTicketBalance.selector
             )
         );

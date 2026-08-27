@@ -394,7 +394,7 @@ library FactoryLib {
     //                               PURE FUNCTIONS
     //////////////////////////////////////////////////////////////////////////*//
 
-    function getHostItTicketHash() internal pure returns (bytes32) {
+    function getCrowdPassTicketHash() internal pure returns (bytes32) {
         return HOST_IT_TICKET;
     }
 

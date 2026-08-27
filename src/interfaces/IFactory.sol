@@ -70,9 +70,9 @@ interface IFactory {
     //                               PURE FUNCTIONS
     //////////////////////////////////////////////////////////////////////////*//
 
-    /// @notice Gets the hash of the HostIt ticket
-    /// @return The hash of the HostIt ticket
-    function hostItTicketHash() external pure returns (bytes32);
+    /// @notice Gets the hash of the CrowdPass ticket
+    /// @return The hash of the CrowdPass ticket
+    function crowdPassTicketHash() external pure returns (bytes32);
 
     /// @notice Gets the hash of a ticket
     /// @param _ticketId {ticketId} The ID of the ticket to get the hash for

@@ -38,7 +38,7 @@ contract ExportSelectorsTest is Test {
         expected[2] = factory.adminTickets.selector;
         expected[3] = factory.allTicketData.selector;
         expected[4] = factory.createTicket.selector;
-        expected[5] = factory.hostItTicketHash.selector;
+        expected[5] = factory.crowdPassTicketHash.selector;
         expected[6] = factory.mainAdminRole.selector;
         expected[7] = factory.removeTicketAdmins.selector;
         expected[8] = factory.ticketAdminRole.selector;
@@ -60,8 +60,8 @@ contract ExportSelectorsTest is Test {
         expected[5] = marketplace.getFeeTokenAddress.selector;
         expected[6] = marketplace.getFiatDomainSeparator.selector;
         expected[7] = marketplace.getFiatVoucherTypehash.selector;
-        expected[8] = marketplace.getHostItBalance.selector;
-        expected[9] = marketplace.getHostItFee.selector;
+        expected[8] = marketplace.getCrowdPassBalance.selector;
+        expected[9] = marketplace.getCrowdPassFee.selector;
         expected[10] = marketplace.getRefundPeriod.selector;
         expected[11] = marketplace.getTicketBalance.selector;
         expected[12] = marketplace.getTicketFee.selector;
@@ -75,7 +75,7 @@ contract ExportSelectorsTest is Test {
         expected[20] = marketplace.redeemFiatVoucher.selector;
         expected[21] = marketplace.setTrustedBackend.selector;
         expected[22] = marketplace.updateTicketFees.selector;
-        expected[23] = marketplace.withdrawHostItBalance.selector;
+        expected[23] = marketplace.withdrawCrowdPassBalance.selector;
         expected[24] = marketplace.withdrawTicketBalance.selector;
         _assertExports(IFacet(address(marketplace)), expected);
     }

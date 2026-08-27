@@ -11,14 +11,14 @@ import {BaseDeploy} from "@lattice-script/base/BaseDeploy.s.sol";
 import {AccessControl} from "@lattice/access/AccessControl.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {AddressesAndFees} from "@ticket-script/helpers/AddressesAndFees.sol";
-import {HostItTickets} from "@ticket/HostItTickets.sol";
+import {CrowdPassTickets} from "@ticket/CrowdPassTickets.sol";
 import {CheckInFacet} from "@ticket/facets/CheckInFacet.sol";
 import {FactoryFacet} from "@ticket/facets/FactoryFacet.sol";
 import {MarketplaceFacet} from "@ticket/facets/MarketplaceFacet.sol";
-import {HostItInit} from "@ticket/inits/HostItInit.sol";
+import {CrowdPassInit} from "@ticket/inits/CrowdPassInit.sol";
 import {Ticket} from "@ticket/libs/Ticket.sol";
 
-abstract contract DeployHostItTicketsHelper is BaseDeploy, Context {
+abstract contract DeployCrowdPassTicketsHelper is BaseDeploy, Context {
     // address constant DIAMOND_CUT_FACET = 0xD1AC537fBE953b0868a6ec93F025c4bB05E6D1AC;
     // address constant DIAMOND_LOUPE_FACET = 0xD1A1C850E1ACd4ce10941e40eD67de60db56D1A1;
     // address constant OWNABLE_FACET = 0x020e74BCB4b03d5Fd1D163d7948D67Ccb7718020;
@@ -79,8 +79,8 @@ abstract contract DeployHostItTicketsHelper is BaseDeploy, Context {
         //  : DIAMOND_INIT;
     }
 
-    function _getHostItInit() internal returns (address) {
-        return address(new HostItInit());
+    function _getCrowdPassInit() internal returns (address) {
+        return address(new CrowdPassInit());
     }
 
     function _getTicketImpl() internal returns (address) {
@@ -104,22 +104,22 @@ abstract contract DeployHostItTicketsHelper is BaseDeploy, Context {
         bytes[] memory initCalldatas = new bytes[](2);
 
         initAddresses[0] = _getDiamondInit();
-        initAddresses[1] = _getHostItInit();
+        initAddresses[1] = _getCrowdPassInit();
 
         initCalldatas[0] = abi.encodeWithSignature("init(address)", _msgSender());
         (uint8[] memory feeTypes, address[] memory addresses) = AddressesAndFees.byChainId(block.chainid);
         initCalldatas[1] = abi.encodeWithSignature(
-            "initHostIt(address,address,uint8[],address[])", _msgSender(), _getTicketImpl(), feeTypes, addresses
+            "initCrowdPass(address,address,uint8[],address[])", _msgSender(), _getTicketImpl(), feeTypes, addresses
         );
 
         return abi.encodeWithSignature("multiInit(address[],bytes[])", initAddresses, initCalldatas);
     }
 
-    function _getHostItTickets() internal returns (address ticket_) {
+    function _getCrowdPassTickets() internal returns (address ticket_) {
         ticket_ =
         // HOST_IT_TICKETS.code.length == 0 ?
-        address(new HostItTickets(tx.origin));
+        address(new CrowdPassTickets(tx.origin));
         // : HOST_IT_TICKETS;
-        HostItTickets(payable(ticket_)).initialize(_createFacetCuts(), _getMultiInit(), _getMultiInitCalldata());
+        CrowdPassTickets(payable(ticket_)).initialize(_createFacetCuts(), _getMultiInit(), _getMultiInitCalldata());
     }
 }

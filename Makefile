@@ -1,5 +1,5 @@
 ################################################################################
-# Makefile for HostIT (Foundry)
+# Makefile for CrowdPass (Foundry)
 #
 # Usage examples:
 #   make help                 # show all commands
@@ -33,7 +33,7 @@ ANVIL ?= anvil
 FOUNDRY_PROFILE ?= default
 
 # Script / Deploy variables (override via environment or inline: make deploy RPC_URL=...)
-SCRIPT ?= script/DeployHostIt.s.sol
+SCRIPT ?= script/DeployCrowdPass.s.sol
 RPC_URL ?= http://127.0.0.1:8545
 ACCOUNT ?= mainKey
 SENDER ?= $(WALLET_ADDR)

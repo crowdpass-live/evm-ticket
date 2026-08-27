@@ -21,7 +21,7 @@ event TicketMinted(uint64 indexed ticketId, FeeType indexed feeType, uint256 fee
 
 event TicketBalanceWithdrawn(uint64 indexed ticketId, FeeType indexed feeType, uint256 fee, address indexed to); // fee:{tok}
 
-event HostItBalanceWithdrawn(FeeType indexed feeType, uint256 fee, address indexed to); // fee:{tok}
+event CrowdPassBalanceWithdrawn(FeeType indexed feeType, uint256 fee, address indexed to); // fee:{tok}
 
 event FiatTicketMinted(
     uint64 indexed ticketId, address indexed buyer, uint40 tokenId, uint256 amount, bytes32 indexed paymentId
@@ -99,7 +99,7 @@ struct MarketplaceStorage {
     mapping(uint64 => mapping(FeeType => uint256)) ticketFee; // {ticketId} => FeeType => {tok}
     mapping(uint64 => mapping(FeeType => uint256)) ticketBalance; // {ticketId} => FeeType => {tok}
     mapping(FeeType => address) feeTokenAddress; // FeeType => {addr}
-    mapping(FeeType => uint256) hostItBalance; // FeeType => {tok}
+    mapping(FeeType => uint256) crowdPassBalance; // FeeType => {tok}
     // --- FIAT storage ---
     address trustedBackend; // owner-managed signer + direct caller
     mapping(bytes32 => bool) usedFiatPaymentIds; // replay guard
@@ -113,14 +113,14 @@ library MarketplaceLib {
     //////////////////////////////////////////////////////////////////////////*//
 
     uint256 internal constant REFUND_PERIOD = 3 days; // {s}
-    uint256 private constant HOSTIT_FEE_BPS = 300; // BPS{1} 3% fee in basis points
+    uint256 private constant CROWDPASS_FEE_BPS = 300; // BPS{1} 3% fee in basis points
     uint256 private constant FEE_BASIS_POINTS = 10_000; // BPS{1} 10,000 basis points
 
     bytes32 internal constant FIAT_VOUCHER_TYPEHASH =
         keccak256("FiatVoucher(uint64 ticketId,address buyer,uint256 amount,bytes32 paymentId,uint48 expiresAt)");
     bytes32 private constant EIP712_DOMAIN_TYPEHASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
-    bytes32 private constant EIP712_NAME_HASH = keccak256(bytes("HostItTickets"));
+    bytes32 private constant EIP712_NAME_HASH = keccak256(bytes("CrowdPassTickets"));
     bytes32 private constant EIP712_VERSION_HASH = keccak256(bytes("1"));
 
     function marketplaceStorage() internal pure returns (MarketplaceStorage storage ms_) {
@@ -144,11 +144,11 @@ library MarketplaceLib {
         address msgSender = msg.sender;
         MarketplaceStorage storage ms = marketplaceStorage();
         // {tok}, {tok}, {tok}
-        (uint256 fee, uint256 hostItFee, uint256 totalFee) = getFees(ms, _ticketId, _feeType);
+        (uint256 fee, uint256 crowdPassFee, uint256 totalFee) = getFees(ms, _ticketId, _feeType);
         if (!ticketData.isFree) {
             if (!feeEnabled(ms, _ticketId, _feeType)) revert FeeNotEnabled(_ticketId, _feeType);
 
-            ms.hostItBalance[_feeType] += hostItFee; // {tok} += {tok}
+            ms.crowdPassBalance[_feeType] += crowdPassFee; // {tok} += {tok}
             if (ticketData.isRefundable) {
                 if (_feeType == FeeType.NATIVE) {
                     // {tok} < {tok}
@@ -176,7 +176,7 @@ library MarketplaceLib {
                     SafeTransferLib.forceSafeTransferETH(ticketData.ticketAdmin, fee);
                 } else {
                     _payWithToken(ms, _feeType, fee, ticketData.ticketAdmin);
-                    _payWithToken(ms, _feeType, hostItFee, address(this));
+                    _payWithToken(ms, _feeType, crowdPassFee, address(this));
                 }
             }
         }
@@ -290,19 +290,19 @@ library MarketplaceLib {
     }
 
     /// @param _to {addr}
-    function withdrawHostItBalance(FeeType _feeType, address _to) internal onlyOwner {
+    function withdrawCrowdPassBalance(FeeType _feeType, address _to) internal onlyOwner {
         if (_feeType == FeeType.FIAT) revert FiatBalanceNotWithdrawable();
 
-        uint256 balance = getHostItBalance(_feeType); // {tok}
+        uint256 balance = getCrowdPassBalance(_feeType); // {tok}
         if (balance == 0) revert InsufficientWithdrawBalance();
-        delete marketplaceStorage().hostItBalance[_feeType];
+        delete marketplaceStorage().crowdPassBalance[_feeType];
 
         if (_feeType == FeeType.NATIVE) {
             SafeTransferLib.forceSafeTransferETH(_to, balance);
         } else {
             SafeTransferLib.safeTransfer(getFeeTokenAddress(_feeType), _to, balance);
         }
-        emit HostItBalanceWithdrawn(_feeType, balance, _to);
+        emit CrowdPassBalanceWithdrawn(_feeType, balance, _to);
     }
 
     /// @param _totalFee {tok}
@@ -462,27 +462,27 @@ library MarketplaceLib {
     }
 
     /// @return ticketFee_ {tok}
-    /// @return hostItFee_ {tok}
+    /// @return crowdPassFee_ {tok}
     /// @return totalFee_ {tok}
     function getFees(uint64 _ticketId, FeeType _feeType)
         internal
         view
-        returns (uint256 ticketFee_, uint256 hostItFee_, uint256 totalFee_)
+        returns (uint256 ticketFee_, uint256 crowdPassFee_, uint256 totalFee_)
     {
         return getFees(marketplaceStorage(), _ticketId, _feeType);
     }
 
     /// @return ticketFee_ {tok}
-    /// @return hostItFee_ {tok}
+    /// @return crowdPassFee_ {tok}
     /// @return totalFee_ {tok}
     function getFees(MarketplaceStorage storage _ms, uint64 _ticketId, FeeType _feeType)
         internal
         view
-        returns (uint256 ticketFee_, uint256 hostItFee_, uint256 totalFee_)
+        returns (uint256 ticketFee_, uint256 crowdPassFee_, uint256 totalFee_)
     {
         ticketFee_ = getTicketFee(_ms, _ticketId, _feeType); // {tok}
-        hostItFee_ = getHostItFee(ticketFee_); // {tok}
-        totalFee_ = ticketFee_ + hostItFee_; // {tok} = {tok} + {tok}
+        crowdPassFee_ = getCrowdPassFee(ticketFee_); // {tok}
+        totalFee_ = ticketFee_ + crowdPassFee_; // {tok} = {tok} + {tok}
     }
 
     /// @return {tok}
@@ -500,20 +500,20 @@ library MarketplaceLib {
     }
 
     /// @return {tok}
-    function getHostItBalance(FeeType _feeType) internal view returns (uint256) {
-        return getHostItBalance(marketplaceStorage(), _feeType);
+    function getCrowdPassBalance(FeeType _feeType) internal view returns (uint256) {
+        return getCrowdPassBalance(marketplaceStorage(), _feeType);
     }
 
     /// @return {tok}
-    function getHostItBalance(MarketplaceStorage storage _ms, FeeType _feeType) internal view returns (uint256) {
-        return _ms.hostItBalance[_feeType];
+    function getCrowdPassBalance(MarketplaceStorage storage _ms, FeeType _feeType) internal view returns (uint256) {
+        return _ms.crowdPassBalance[_feeType];
     }
 
     /// @param _fee {tok}
     /// @return {tok}
-    function getHostItFee(uint256 _fee) internal pure returns (uint256) {
+    function getCrowdPassFee(uint256 _fee) internal pure returns (uint256) {
         // {tok} = ({tok} * BPS{1}) / BPS{1}
-        return ((_fee * HOSTIT_FEE_BPS) / FEE_BASIS_POINTS);
+        return ((_fee * CROWDPASS_FEE_BPS) / FEE_BASIS_POINTS);
     }
 
     //*//////////////////////////////////////////////////////////////////////////
@@ -576,8 +576,8 @@ library MarketplaceLib {
         emit TicketMinted(_td.id, _feeType, _totalFee, tokenId_);
     }
 
-    /// @dev Core fiat mint funnel used by all four entry points. No tokens moved; HostIt's fiat share is
-    ///      reconciled entirely off-chain and is intentionally NOT accumulated in `hostItBalance[FIAT]`.
+    /// @dev Core fiat mint funnel used by all four entry points. No tokens moved; CrowdPass's fiat share is
+    ///      reconciled entirely off-chain and is intentionally NOT accumulated in `crowdPassBalance[FIAT]`.
     function _mintFiatTicket(uint64 _ticketId, address _buyer, uint256 _amount, bytes32 _paymentId)
         private
         returns (uint40 tokenId_)

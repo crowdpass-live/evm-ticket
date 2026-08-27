@@ -72,8 +72,8 @@ contract FactoryFacet is IFactory, IFacet {
     //                               PURE FUNCTIONS
     //////////////////////////////////////////////////////////////////////////*//
 
-    function hostItTicketHash() public pure returns (bytes32) {
-        return FactoryLib.getHostItTicketHash();
+    function crowdPassTicketHash() public pure returns (bytes32) {
+        return FactoryLib.getCrowdPassTicketHash();
     }
 
     /// @param _ticketId {ticketId}
@@ -98,7 +98,7 @@ contract FactoryFacet is IFactory, IFacet {
             this.adminTickets.selector,
             this.allTicketData.selector,
             this.createTicket.selector,
-            this.hostItTicketHash.selector,
+            this.crowdPassTicketHash.selector,
             this.mainAdminRole.selector,
             this.removeTicketAdmins.selector,
             this.ticketAdminRole.selector,

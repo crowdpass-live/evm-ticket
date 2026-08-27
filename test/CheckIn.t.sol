@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.30;
 
-import {DeployedHostItTickets} from "@ticket-test/states/DeployedHostItTickets.sol";
+import {DeployedCrowdPassTickets} from "@ticket-test/states/DeployedCrowdPassTickets.sol";
 import {AddressZeroAdmin, FullTicketData, NoAdmins} from "@ticket/libs/FactoryLib.sol";
 import {FeeType} from "@ticket/libs/MarketplaceLib.sol";
 /// forge-lint: disable-next-line(unaliased-plain-import)
 import "@ticket/libs/CheckInLib.sol";
 
-contract CheckInTest is DeployedHostItTickets {
+contract CheckInTest is DeployedCrowdPassTickets {
     function test_checkIn() public {
         (uint64 ticketId, uint40 tokenId) = _mintTicketFree();
         vm.warp(1 days + 1);
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit CheckedIn(ticketId, alice, 0, tokenId);
         checkInFacet.checkIn(ticketId, tokenId);
         assertTrue(checkInFacet.isCheckedIn(ticketId, alice));
         assertTrue(checkInFacet.isCheckedInForDay(ticketId, 0, alice));
         vm.warp(block.timestamp + 1 days);
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit CheckedIn(ticketId, alice, 1, tokenId);
         checkInFacet.checkIn(ticketId, tokenId);
         assertTrue(checkInFacet.isCheckedIn(ticketId, alice));

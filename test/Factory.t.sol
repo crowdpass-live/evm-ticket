@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.30;
 
-import {DeployedHostItTickets} from "@ticket-test/states/DeployedHostItTickets.sol";
+import {DeployedCrowdPassTickets} from "@ticket-test/states/DeployedCrowdPassTickets.sol";
 /// forge-lint: disable-next-line(unaliased-plain-import)
 import "@ticket/libs/MarketplaceLib.sol";
 /// forge-lint: disable-next-line(unaliased-plain-import)
 import "@ticket/libs/FactoryLib.sol";
 
-contract FactoryTest is DeployedHostItTickets {
+contract FactoryTest is DeployedCrowdPassTickets {
     function test_createFreeTicket() public {
         ExtraTicketData memory extraTicketData;
-        vm.expectEmit(true, true, true, false, hostIt);
+        vm.expectEmit(true, true, true, false, crowdPass);
         emit TicketCreated(1, owner, extraTicketData);
         _createFreeTicket();
         uint64 ticketId = factoryFacet.ticketCount();
@@ -40,7 +40,7 @@ contract FactoryTest is DeployedHostItTickets {
         TicketData memory ticketData = _getFreeUpdatedTicketData();
         vm.warp(10000);
         ExtraTicketData memory extraTicketData;
-        vm.expectEmit(true, true, false, false, hostIt);
+        vm.expectEmit(true, true, false, false, crowdPass);
         emit TicketUpdated(ticketId, owner, extraTicketData);
         factoryFacet.updateTicket(ticketData, ticketId);
         FullTicketData memory fullTicketData = factoryFacet.ticketData(ticketId);
@@ -57,7 +57,7 @@ contract FactoryTest is DeployedHostItTickets {
 
     function test_createPaidTicket() public {
         ExtraTicketData memory extraTicketData;
-        vm.expectEmit(true, true, true, false, hostIt);
+        vm.expectEmit(true, true, true, false, crowdPass);
         emit TicketCreated(1, owner, extraTicketData);
         _createPaidTicket();
         uint64 ticketId = factoryFacet.ticketCount();
@@ -80,7 +80,7 @@ contract FactoryTest is DeployedHostItTickets {
         TicketData memory ticketData = _getPaidUpdatedTicketData();
         vm.warp(10000);
         ExtraTicketData memory extraTicketData;
-        vm.expectEmit(true, true, false, false, hostIt);
+        vm.expectEmit(true, true, false, false, crowdPass);
         emit TicketUpdated(ticketId, owner, extraTicketData);
         factoryFacet.updateTicket(ticketData, ticketId);
         FullTicketData memory fullTicketData = factoryFacet.ticketData(ticketId);
@@ -147,9 +147,9 @@ contract FactoryTest is DeployedHostItTickets {
         assertEq(aliceTicketDatas[0].id, 3);
     }
 
-    function test_hostItTicketHash() public view {
-        bytes32 hostItTicketHash = factoryFacet.hostItTicketHash();
-        assertEq(hostItTicketHash, keccak256("host.it.ticket"));
+    function test_crowdPassTicketHash() public view {
+        bytes32 crowdPassTicketHash = factoryFacet.crowdPassTicketHash();
+        assertEq(crowdPassTicketHash, keccak256("host.it.ticket"));
     }
 
     function test_ticketHash() public view {

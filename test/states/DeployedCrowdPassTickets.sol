@@ -5,14 +5,14 @@ import {IDiamondCut} from "@diamond/interfaces/IDiamondCut.sol";
 import {IDiamondLoupe} from "@diamond/interfaces/IDiamondLoupe.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
-import {DeployHostItTickets} from "@ticket-script/DeployHostItTickets.s.sol";
+import {DeployCrowdPassTickets} from "@ticket-script/DeployCrowdPassTickets.s.sol";
 import {AddressesAndFees, ERC6551_REGISTRY} from "@ticket-script/helpers/AddressesAndFees.sol";
-import {DeployHostItTicketsHelper} from "@ticket-script/helpers/DeployHostItTicketsHelper.sol";
-import {HostItTickets} from "@ticket/HostItTickets.sol";
+import {DeployCrowdPassTicketsHelper} from "@ticket-script/helpers/DeployCrowdPassTicketsHelper.sol";
+import {CrowdPassTickets} from "@ticket/CrowdPassTickets.sol";
 import {CheckInFacet} from "@ticket/facets/CheckInFacet.sol";
 import {FactoryFacet} from "@ticket/facets/FactoryFacet.sol";
 import {MarketplaceFacet} from "@ticket/facets/MarketplaceFacet.sol";
-import {HostItInit} from "@ticket/inits/HostItInit.sol";
+import {CrowdPassInit} from "@ticket/inits/CrowdPassInit.sol";
 import {ICheckIn} from "@ticket/interfaces/ICheckIn.sol";
 import {IFactory} from "@ticket/interfaces/IFactory.sol";
 import {IMarketplace} from "@ticket/interfaces/IMarketplace.sol";
@@ -24,9 +24,9 @@ import {Test} from "forge-std/Test.sol";
 /// forge-lint: disable-next-line(unaliased-plain-import)
 import "@ticket/libs/MarketplaceLib.sol";
 
-abstract contract DeployedHostItTickets is Test, DeployHostItTicketsHelper {
-    address payable public hostIt;
-    DeployHostItTickets deployHostItTickets;
+abstract contract DeployedCrowdPassTickets is Test, DeployCrowdPassTicketsHelper {
+    address payable public crowdPass;
+    DeployCrowdPassTickets deployCrowdPassTickets;
 
     IFactory public factoryFacet;
     ICheckIn public checkInFacet;
@@ -61,14 +61,14 @@ abstract contract DeployedHostItTickets is Test, DeployHostItTicketsHelper {
     /// @notice Deploys the Diamond contract and initializes interface references and facet addresses.
     /// @dev This function is intended to be called in a test setup phase (e.g., `setUp()` in Foundry).
     function setUp() public virtual {
-        deployHostItTickets = new DeployHostItTickets();
-        hostIt = payable(deployHostItTickets.run());
+        deployCrowdPassTickets = new DeployCrowdPassTickets();
+        crowdPass = payable(deployCrowdPassTickets.run());
 
-        diamondCut = IDiamondCut(hostIt);
-        diamondLoupe = IDiamondLoupe(hostIt);
-        factoryFacet = IFactory(hostIt);
-        checkInFacet = ICheckIn(hostIt);
-        marketplaceFacet = IMarketplace(hostIt);
+        diamondCut = IDiamondCut(crowdPass);
+        diamondLoupe = IDiamondLoupe(crowdPass);
+        factoryFacet = IFactory(crowdPass);
+        checkInFacet = ICheckIn(crowdPass);
+        marketplaceFacet = IMarketplace(crowdPass);
 
         facetAddresses = diamondLoupe.facetAddresses();
 
@@ -77,125 +77,125 @@ abstract contract DeployedHostItTickets is Test, DeployHostItTicketsHelper {
         vm.label(bob, "BOB");
         vm.label(charlie, "CHARLIE");
         vm.label(withdrawer, "WITHDRAWER");
-        vm.label(hostIt, "HOSTIT");
+        vm.label(crowdPass, "CROWDPASS");
         vm.label(owner, "TEST_ADDRESS");
     }
 
     function _mintTicketFree() internal returns (uint64 ticketId_, uint40 tokenId_) {
         _createFreeTicket();
         ticketId_ = factoryFacet.ticketCount();
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TicketMinted(ticketId_, FeeType.NONE, 0, 1);
         tokenId_ = marketplaceFacet.mintTicket(ticketId_, FeeType.NONE, alice);
     }
 
     /// forge-lint: disable-next-line(mixed-case-function)
-    function _mintTicketETH() internal returns (uint64 ticketId_, uint40 tokenId_, uint256 fee_, uint256 hostItFee_) {
+    function _mintTicketETH() internal returns (uint64 ticketId_, uint40 tokenId_, uint256 fee_, uint256 crowdPassFee_) {
         _createPaidTicket();
         ticketId_ = factoryFacet.ticketCount();
-        (uint256 fee, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId_, FeeType.NATIVE);
+        (uint256 fee, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId_, FeeType.NATIVE);
         hoax(alice, totalFee);
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TicketMinted(ticketId_, FeeType.NATIVE, totalFee, 1);
         tokenId_ = marketplaceFacet.mintTicket{value: totalFee}(ticketId_, FeeType.NATIVE, alice);
         fee_ = fee;
-        hostItFee_ = hostItFee;
+        crowdPassFee_ = crowdPassFee;
     }
 
     /// forge-lint: disable-next-line(mixed-case-function)
     function _mintTicketUSDT()
         internal
-        returns (uint64 ticketId_, uint40 tokenId_, uint256 fee_, uint256 hostItFee_, ERC20Mock usdt_)
+        returns (uint64 ticketId_, uint40 tokenId_, uint256 fee_, uint256 crowdPassFee_, ERC20Mock usdt_)
     {
         _createPaidTicket();
         ticketId_ = factoryFacet.ticketCount();
-        (uint256 fee, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId_, FeeType.USDT);
+        (uint256 fee, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId_, FeeType.USDT);
         usdt_ = ERC20Mock(marketplaceFacet.getFeeTokenAddress(FeeType.USDT));
         usdt_.mint(alice, totalFee);
         vm.prank(alice);
         usdt_.approve(address(marketplaceFacet), totalFee);
         vm.prank(alice);
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TicketMinted(ticketId_, FeeType.USDT, totalFee, 1);
         tokenId_ = marketplaceFacet.mintTicket(ticketId_, FeeType.USDT, alice);
         fee_ = fee;
-        hostItFee_ = hostItFee;
+        crowdPassFee_ = crowdPassFee;
     }
 
     /// forge-lint: disable-next-line(mixed-case-function)
     function _mintTicketUSDC()
         internal
-        returns (uint64 ticketId_, uint40 tokenId_, uint256 fee_, uint256 hostItFee_, ERC20Mock usdc_)
+        returns (uint64 ticketId_, uint40 tokenId_, uint256 fee_, uint256 crowdPassFee_, ERC20Mock usdc_)
     {
         _createPaidTicket();
         ticketId_ = factoryFacet.ticketCount();
-        (uint256 fee, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId_, FeeType.USDC);
+        (uint256 fee, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId_, FeeType.USDC);
         usdc_ = ERC20Mock(marketplaceFacet.getFeeTokenAddress(FeeType.USDC));
         usdc_.mint(alice, totalFee);
         vm.prank(alice);
         usdc_.approve(address(marketplaceFacet), totalFee);
         vm.prank(alice);
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TicketMinted(ticketId_, FeeType.USDC, totalFee, 1);
         tokenId_ = marketplaceFacet.mintTicket(ticketId_, FeeType.USDC, alice);
         fee_ = fee;
-        hostItFee_ = hostItFee;
+        crowdPassFee_ = crowdPassFee;
     }
 
     /// forge-lint: disable-next-line(mixed-case-function)
     function _mintTicketETHRefundable()
         internal
-        returns (uint64 ticketId_, uint40 tokenId_, uint256 fee_, uint256 hostItFee_)
+        returns (uint64 ticketId_, uint40 tokenId_, uint256 fee_, uint256 crowdPassFee_)
     {
         _createRefundablePaidTicket();
         ticketId_ = factoryFacet.ticketCount();
-        (uint256 fee, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId_, FeeType.NATIVE);
+        (uint256 fee, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId_, FeeType.NATIVE);
         hoax(alice, totalFee);
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TicketMinted(ticketId_, FeeType.NATIVE, totalFee, 1);
         tokenId_ = marketplaceFacet.mintTicket{value: totalFee}(ticketId_, FeeType.NATIVE, alice);
         fee_ = fee;
-        hostItFee_ = hostItFee;
+        crowdPassFee_ = crowdPassFee;
     }
 
     /// forge-lint: disable-next-line(mixed-case-function)
     function _mintTicketUSDTRefundable()
         internal
-        returns (uint64 ticketId_, uint40 tokenId_, uint256 fee_, uint256 hostItFee_, ERC20Mock usdt_)
+        returns (uint64 ticketId_, uint40 tokenId_, uint256 fee_, uint256 crowdPassFee_, ERC20Mock usdt_)
     {
         _createRefundablePaidTicket();
         ticketId_ = factoryFacet.ticketCount();
-        (uint256 fee, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId_, FeeType.USDT);
+        (uint256 fee, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId_, FeeType.USDT);
         usdt_ = ERC20Mock(marketplaceFacet.getFeeTokenAddress(FeeType.USDT));
         usdt_.mint(alice, totalFee);
         vm.prank(alice);
         usdt_.approve(address(marketplaceFacet), totalFee);
         vm.prank(alice);
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TicketMinted(ticketId_, FeeType.USDT, totalFee, 1);
         tokenId_ = marketplaceFacet.mintTicket(ticketId_, FeeType.USDT, alice);
         fee_ = fee;
-        hostItFee_ = hostItFee;
+        crowdPassFee_ = crowdPassFee;
     }
 
     /// forge-lint: disable-next-line(mixed-case-function)
     function _mintTicketUSDCRefundable()
         internal
-        returns (uint64 ticketId_, uint40 tokenId_, uint256 fee_, uint256 hostItFee_, ERC20Mock usdc_)
+        returns (uint64 ticketId_, uint40 tokenId_, uint256 fee_, uint256 crowdPassFee_, ERC20Mock usdc_)
     {
         _createRefundablePaidTicket();
         ticketId_ = factoryFacet.ticketCount();
-        (uint256 fee, uint256 hostItFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId_, FeeType.USDC);
+        (uint256 fee, uint256 crowdPassFee, uint256 totalFee) = marketplaceFacet.getAllFees(ticketId_, FeeType.USDC);
         usdc_ = ERC20Mock(marketplaceFacet.getFeeTokenAddress(FeeType.USDC));
         usdc_.mint(alice, totalFee);
         vm.prank(alice);
         usdc_.approve(address(marketplaceFacet), totalFee);
         vm.prank(alice);
-        vm.expectEmit(true, true, true, true, hostIt);
+        vm.expectEmit(true, true, true, true, crowdPass);
         emit TicketMinted(ticketId_, FeeType.USDC, totalFee, 1);
         tokenId_ = marketplaceFacet.mintTicket(ticketId_, FeeType.USDC, alice);
         fee_ = fee;
-        hostItFee_ = hostItFee;
+        crowdPassFee_ = crowdPassFee;
     }
 
     function _createFreeTicket() internal {

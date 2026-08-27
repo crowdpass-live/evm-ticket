@@ -5,7 +5,7 @@ import {FeeType, FiatVoucher} from "@ticket/libs/MarketplaceLib.sol";
 
 /// @title Marketplace interface
 /// @notice Interface for the Marketplace facet
-/// @author HostIt Protocol
+/// @author CrowdPass Protocol
 interface IMarketplace {
     //*//////////////////////////////////////////////////////////////////////////
     //                             EXTERNAL FUNCTIONS
@@ -38,10 +38,10 @@ interface IMarketplace {
     /// @param to {addr} The address to send the balance to
     function withdrawTicketBalance(uint64 ticketId, FeeType feeType, address to) external;
 
-    /// @notice Withdraws the HostIt balance for the specified fee type. Reverts for FIAT.
+    /// @notice Withdraws the CrowdPass balance for the specified fee type. Reverts for FIAT.
     /// @param feeType The type of fee to withdraw the balance for
     /// @param to {addr} The address to send the balance to
-    function withdrawHostItBalance(FeeType feeType, address to) external;
+    function withdrawCrowdPassBalance(FeeType feeType, address to) external;
 
     //*//////////////////////////////////////////////////////////////////////////
     //                       FIAT PAYMENT — EXTERNAL FUNCTIONS
@@ -103,12 +103,12 @@ interface IMarketplace {
     /// @param ticketId {ticketId} The ID of the ticket to get the fees for
     /// @param feeType The type of fee to get
     /// @return ticketFee {tok} The ticket fee for the ticket
-    /// @return hostItFee {tok} The HostIt fee for the ticket
+    /// @return crowdPassFee {tok} The CrowdPass fee for the ticket
     /// @return totalFee {tok} The total fee for the ticket
     function getAllFees(uint64 ticketId, FeeType feeType)
         external
         view
-        returns (uint256 ticketFee, uint256 hostItFee, uint256 totalFee);
+        returns (uint256 ticketFee, uint256 crowdPassFee, uint256 totalFee);
 
     /// @notice Gets the balance of the specified ticket for the specified fee type
     /// @param ticketId {ticketId} The ID of the ticket to get the balance for
@@ -116,10 +116,10 @@ interface IMarketplace {
     /// @return {tok} The balance of the ticket for the fee type
     function getTicketBalance(uint64 ticketId, FeeType feeType) external view returns (uint256);
 
-    /// @notice Gets the balance of HostIt for the specified fee type
+    /// @notice Gets the balance of CrowdPass for the specified fee type
     /// @param feeType The type of fee to get the balance for
-    /// @return {tok} The balance of HostIt for the fee type
-    function getHostItBalance(FeeType feeType) external view returns (uint256);
+    /// @return {tok} The balance of CrowdPass for the fee type
+    function getCrowdPassBalance(FeeType feeType) external view returns (uint256);
 
     //*//////////////////////////////////////////////////////////////////////////
     //                         FIAT PAYMENT — VIEW FUNCTIONS
@@ -149,10 +149,10 @@ interface IMarketplace {
     //                               PURE FUNCTIONS
     //////////////////////////////////////////////////////////////////////////*//
 
-    /// @notice Calculates the HostIt fee for the specified fee
-    /// @param fee {tok} The fee to calculate the HostIt fee for
-    /// @return {tok} The HostIt fee for the fee
-    function getHostItFee(uint256 fee) external pure returns (uint256);
+    /// @notice Calculates the CrowdPass fee for the specified fee
+    /// @param fee {tok} The fee to calculate the CrowdPass fee for
+    /// @return {tok} The CrowdPass fee for the fee
+    function getCrowdPassFee(uint256 fee) external pure returns (uint256);
 
     /// @notice Gets the refund period
     /// @return {s} The refund period
