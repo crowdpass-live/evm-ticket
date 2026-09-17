@@ -1,4 +1,4 @@
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/crowdpass-events/evm-ticket)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/crowdpass-live/evm-ticket)
 
 # CrowdPass Protocol - Ticket Smart Contracts
 
